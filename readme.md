@@ -6,11 +6,15 @@ Bluetooth Low Energy (BLE) sensor nodes are increasingly utilized across a wide 
 
 ![Architecture](./assets/aws_greengrass_ble_gateway_architecture.png)
 
-In this solution, the **[STM32WB](https://www.st.com/en/microcontrollers-microprocessors/stm32wb-series.html)** series microcontroller acts as the BLE node, transmitting sensor data. The application sets up the **[STM32MPU](https://www.st.com/en/microcontrollers-microprocessors/stm32-arm-cortex-mpus.html)** as the **AWS IoT Greengrass BLE Sensor Gateway**, allowing it to securely transmits data from the STM32WB devices to AWS IoT Core for processing, analytics, and integration with other AWS services. Additionally, the solution supports remote deployment to the STM32MPU devices operating **[Greengrass V2](https://docs.aws.amazon.com/greengrass/v2/developerguide/what-is-iot-greengrass.html)** in the field, providing flexibility for managing remote and distributed sensor networks.
+In this solution, the **[STEVAL-PROTEUS1](https://www.st.com/en/evaluation-tools/steval-proteus1.html)** series microcontroller acts as the BLE node, transmitting sensor data. The application sets up the **[STM32MPU](https://www.st.com/en/microcontrollers-microprocessors/stm32-arm-cortex-mpus.html)** as the **AWS IoT Greengrass BLE Sensor Gateway**, allowing it to securely transmits data from the STEVAL-PROTEUS1 devices to AWS IoT Core for processing, analytics, and integration with other AWS services. Additionally, the solution supports remote deployment to the STM32MPU devices operating **[Greengrass Lite](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-lite-component.html)** in the field, providing flexibility for managing remote and distributed sensor networks.
 
 ### What is AWS IoT Greengrass?
 
 AWS IoT Greengrass is a service that extends AWS to edge devices, allowing them to act locally on the data they generate. It enables local execution of AWS Lambda functions, message brokering, data caching, and synchronization with AWS cloud services, even when the devices are offline. Greengrass helps you manage remote devices at scale, securely deploy applications, and keep devices up-to-date with remote software updates. 
+
+#### What is AWS IoT Greengrass Lite?
+
+The Greengrass nucleus lite is a device runtime for constrained edge devices optimized for minimal memory footprint (uses less than 5MB RAM). It has been introduced with AWS IoT Greengrass version 2.14.0 release and is backward compatible with AWS IoT Greengrass generic components, Greengrass V2 API, and SDK.
 
 ### AWS IoT Greengrass Remote Deployment
 
@@ -28,7 +32,6 @@ This setup allows you to:
 
 1. **Developer Prepares the Component**:
    - The **Developer PC** clones this **BLE Gateway Component**.
-   
 
 2. **Upload the Component to Greengrass**:
    - The developer uploads the component artifacts to **Amazon S3**.
@@ -65,14 +68,13 @@ This project serves as a proof of concept, collecting data from BLE devices usin
 
 ## **Technical Overview**
 
-This gateway is a Python-based application packaged as an **[AWS IoT Greengrass V2 component](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-components.html)** for **STM32MPU devices**. It enables **STM32MPU devices** to communicate with nearby **BLE sensor nodes**. The component is **[deployed remotely](https://docs.aws.amazon.com/greengrass/v2/developerguide/create-deployments.html) from the developer's PC** to the STM32MPU board, allowing it to function independently in the field, providing seamless data collection and communication with AWS IoT Core.
+This gateway is a Python-based application packaged as an **[AWS IoT Greengrass V2 component](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-components.html)** for **STM32MPU devices**. It enables **STM32MPU devices** to communicate with nearby **BLE sensor nodes**. The component is **[deployed remotely](https://docs.aws.amazon.com/greengrass/v2/developerguide/create-deployments.html) from the developer's PC** to an STM32MPU board, allowing it to function independently in the field, providing seamless data collection and communication with AWS IoT Core.
 
 Key features of the component include:
 
-- **BLE Device Scanning**: The component uses the **[Bleak](https://bleak.readthedocs.io/en/latest/)** library to scan for nearby BLE devices that advertise specific service **UUIDs (Universially Unique Identifiers)** (e.g., Health Thermometer Service or any custom BLE Sensor Node service UUID).
-   - **Health Thermometer Service UUID**: By default, the component scans for the **Health Thermometer Service UUID** (`00001809-0000-1000-8000-00805f9b34fb`), which is the standard UUID for health thermometer devices as defined in the **[Health Thermometer Profile](https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32WBA_Health_Thermometer#Health_Thermometer_Profile)**. This service enables the collection of temperature data from BLE-enabled health thermometers, and is supported in the provided `BLE_HealthThermometer.bin` firmware. The UUID can be changed in the component’s configuration if you need to scan for other custom services or BLE sensor nodes that use different service UUIDs.
+- **BLE Device Scanning**: The component uses the **[Bleak](https://bleak.readthedocs.io/en/latest/)** library to scan for nearby BLE devices that advertise the [STMicroelectronics Manufacturer ID](https://www.bluetooth.com/specifications/assigned-numbers/)
   
-- **Temperature Data Collection**: It collects temperature data or other sensor information from BLE-enabled devices and formats the data into structured **JSON MQTT messages**.
+- **Data Collection**: The system subscribes to BLE notifications for **temperature**, **accelerometer events**, **switch status**, and **battery status** from nearby PROTEUS devices. It processes and formats the received data into structured **JSON MQTT messages**. For more details, refer to the [Data Collection](#data-collection) section.  
 
 - **Secure MQTT Communication**: The component uses the **[Paho-MQTT](https://pypi.org/project/paho-mqtt/)** library along with **TLS encryption** to securely send data to AWS IoT Core via the MQTT protocol.
 
@@ -80,37 +82,69 @@ Key features of the component include:
 
 By packaging this functionality as an AWS Greengrass component, developers can deploy and manage the gateway remotely, without needing direct access to each device in the field, ensuring scalability and ease of maintenance.
 
-### MQTT Message Structure
+### Data Collection  
 
-Once the sensor data is collected from the BLE device, it is formatted as a structured JSON object before being published to the MQTT broker. The message contains several key data fields:
+#### Overview  
+This system collects and processes sensor data from a Bluetooth Low Energy (BLE) device using predefined **service** and **characteristic UUIDs**. Incoming notifications are parsed based on the characteristic type, and the extracted data is published via MQTT.  
 
-1. **`device_name`**: A unique identifier for the device sending the data (e.g., "Thermometer1").
-2. **`device_address`**: The Bluetooth address of the BLE device (e.g., "A0:23:41:89:56:3C").
-3. **`temperature`**: The actual temperature reading from the device (e.g., 22.5).
-4. **`unit`**: The unit of temperature measurement, determined by flags in the BLE data (e.g., "Celsius" or "Fahrenheit").
-5. **`timestamp`**: The timestamp of when the data was collected, represented as a floating-point number denoting the time.
+#### **Service and Characteristic UUIDs**  
+- **Service UUID**: `00000000-0001-11e1-9ab4-0002a5d5c51b` (PROTEUS)  
+- **Characteristics**:  
+  - **Battery**: `00020000-0001-11e1-ac36-0002a5d5c51b`  
+  - **Temperature**: `00040000-0001-11e1-ac36-0002a5d5c51b`  
+  - **Accelerometer Event**: `00000400-0001-11e1-ac36-0002a5d5c51b`  
+  - **Switch**: `20000000-0001-11e1-ac36-0002a5d5c51b`  
 
-The message is formatted as follows:
+#### **Notification Handling**  
+Incoming BLE notifications are processed based on the characteristic UUID, and data is extracted accordingly:  
 
-```json
-{
-  "device_name": "HTSTM",
-  "device_address": "A0:23:41:89:56:3C",
-  "temperature": 39,
-  "unit": "Celsius",
-  "timestamp": 1617289258.93842
-}
-```
+##### **1. Temperature Data**  
+- **Ignored**: First temperature reading  
+- **Fields**:  
+  - `timestamp` (UInt16)  
+  - `temperature` (°C, scaled by 10)  
+- **MQTT Topic**: `{device_name}/temp/{device_address}`  
 
-After the message is prepared, it is serialized into a JSON string and published to the MQTT broker. 
+##### **2. Battery Data**  
+- **Fields**:  
+  - `timestamp` (UInt16)  
+  - `battery` percentage (scaled by 10)  
+  - `voltage` (V, scaled by 1000)  
+  - `current` (mA, scaled by 10)  
+  - `status` (mapped from a predefined set of values)  
+- **Status Mapping**:  
+  - `0`: Low battery  
+  - `1`: Discharging  
+  - `2`: Plugged, not charging  
+  - `3`: Charging  
+  - `4`: Unknown  
+- **MQTT Topic**: `{device_name}/battery/{device_address}`  
 
-The **topic** for the message is dynamically generated based on the device's name and address. For instance with the previous example, the topic would look like this:
+##### **3. Accelerometer Event Data**  
+- **Fields**:  
+  - `timestamp` (UInt16)  
+  - `event` (mapped from predefined values)  
+  - `steps` (UInt16)  
+- **Event Mapping**:  
+  - `0x00`: No event  
+  - `0x01`: Orientation top right  
+  - `0x02`: Orientation bottom right  
+  - `0x03`: Orientation bottom left  
+  - `0x04`: Orientation top left  
+  - `0x05`: Orientation up  
+  - `0x06`: Orientation bottom  
+  - `0x08`: Tilt  
+  - `0x10`: Free fall  
+  - `0x20`: Single tap  
+  - `0x40`: Double tap  
+  - `0x80`: Wake up  
+- **MQTT Topic**: `{device_name}/acc_event/{device_address}`  
 
-```
-HTSTM/temp/A0:23:41:89:56:3C
-```
-
-The message is then securely transmitted over MQTT protocol to the AWS IoT Core MQTT broker, where it can be processed further, logged, or integrated with other cloud-based services.
+##### **4. Switch Data**  
+- **Fields**:  
+  - `timestamp` (UInt16)  
+  - `switch` state (`0`: OFF, `1`: ON)  
+- **MQTT Topic**: `{device_name}/switch/{device_address}`  
 
 ### Summary
 
@@ -134,7 +168,6 @@ GG_BLE_Gateway/
 │   │           └── install.sh                     # Dependency installation script
 │   └── recipes/
 │       └── com.example.BleGateway-TEMPLATE.yaml   # Greengrass component recipe template
-├── BLE_HealthThermometer.bin                      # STM32WB55 Nucleo BLE Firmware
 ├── config.json                                    # Deployment configuration file
 └── deploy.sh                                      # Deployment script
 ```
@@ -149,19 +182,14 @@ GG_BLE_Gateway/
 
 ## **Required Software and Hardware**
 
-### 1. **STM32WB BLE Devices:**
-   - **Compatible Devices:**  
-     - Any BLE-enabled device that supports GATT profiles.  
-     - This code has been tested with the **[STM32WB55 Nucleo](https://www.st.com/en/evaluation-tools/p-nucleo-wb55.html)** board running the **[Health Thermometer Sensor Example](https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32WBA_Health_Thermometer)** firmware provided.
-
+### 1. **STEVAL-PROTEUS1:**
    <div style="text-align:center;">
-     <img src="assets/NUCLEO-WB55RG.jpg" alt="STM32WB55 Nucleo" width="300" />
+     <img src="assets/PROTEUS.png" alt="STEVAL-PROTEUS1" width="300" />
    </div>
 
    - **Compatible Firmware:**  
-     - You can flash the prebuilt **Health Thermometer Service** firmware to the **STM32WB55 Nucleo** board by simply dragging and dropping the [BLE_HealthThermometer.bin](BLE_HealthThermometer.bin) file onto the board. This allows you to skip the build process.  
-     - For build instructions and more example projects, check out the official **STM32WB** BLE resources:  
-       - [STM32WB BLE Project Examples](https://wiki.st.com/stm32mcu/wiki/Connectivity:STM32WB_Build_BLE_Project)
+      - The **STEVAL-PROTEUS** comes preloaded with compatible firmware. Both **version 1.0.0** and **version 1.1.1** are supported. You can use the preloaded firmware or rebuild and flash your own image. 
+      - For detailed build instructions, refer to the official documentation: [STSW-PROTEUS](https://www.st.com/en/embedded-software/stsw-proteus.html).  
 
 ### 2. **STM32MPU Boards (Greengrass-Compatible):**
    - A **Greengrass-compatible** STM32MPU board is required for deployment.
@@ -204,21 +232,20 @@ To interact with AWS services from the terminal, you need to have the AWS CLI in
 ### **1. Clone This Repository**
 
    ```bash
-   git clone https://github.com/AlnurElberier/GG_BLE_Gateway.git
+   git clone https://github.com/AlnurElberier/GreenGrass_Lite_BLE_Gateway_Proteus
    ```
 
-### **2. Flash Firmware to STM32WB Sensor Node**
-
-   **Drag and Drop the Binary**  
-   - Connect the STM32WB board to your computer via USB.
-   - Drag and drop the provided `BLE_HealthThermometer.bin` firmware file onto the board.
+### **2. Power on STEVAL-PROTEUS**
+  
+   - Power on your STEVAL-PROTEUS board
+   - Ensure you are using a [comptible firmware version](#1-steval-proteus1)
+   - For additional support please review [Getting started with the STEVAL-PROTEUS1](https://www.st.com/resource/en/user_manual/um3000-getting-started-with-the-stevalproteus1-evaluation-kit-for-condition-monitoring-based-on-the-24-ghz-stm32wb5mmg-module-stmicroelectronics.pdf)
 
 
 ### **3. Register Your STM32MPU Board as an AWS IoT Greengrass Lite Device**
 
    Follow this lightweight approach to set up AWS IoT Greengrass on STM32MPU devices :
    - **[STM32MP1_AWS-IoT-Greengrass-nucleus-lite](https://github.com/stm32-hotspot/STM32MP1_AWS-IoT-Greengrass-nucleus-lite)**
-   - **[STM32MP2_AWS-IoT-Greengrass-nucleus-lite](https://github.com/stm32-hotspot/STM32MP2_AWS-IoT-Greengrass-nucleus-lite)**
    
 
 

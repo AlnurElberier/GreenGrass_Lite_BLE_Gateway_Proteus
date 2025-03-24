@@ -15,7 +15,7 @@ with Diagram("AWS Greengrass BLE Gateway Architecture", show=False, direction="B
     with Cluster("On-Prem / Edge Location", direction="TB"):
         greengrass = Custom("STM32MPU\nGreengrassV2\nGateway\n", "./MP1DK.jpeg")
         with Cluster("Bluetooth Low Energy (BLE)", direction="TB"):
-            sensors = [Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg") for _ in range(3)]
+            sensors = [Custom("STM32WB55\nSensor Node", "./PROTEUS.png") for _ in range(3)]
             ble = Custom("Bluetooth\nLow Energy", "./Bluetooth.png")
 
         

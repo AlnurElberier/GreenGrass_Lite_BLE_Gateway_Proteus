@@ -15,7 +15,7 @@ from diagrams.custom import Custom
 # Remote Health Monitoring - Uses AI/ML for health trend analysis
 with Diagram("Remote Health Monitoring", show=False):
     with Cluster("BLE Network"):
-        ble_sensor = Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg")
+        ble_sensor = Custom("STM32WB55\nSensor Node", "./PROTEUS.png")
         greengrass_gateway = Custom("STM32MPU\nGreengrassV2\nGateway\n", "./MP1DK.jpeg")
 
     iot_core = IotCore("AWS IoT Core")
@@ -30,7 +30,7 @@ with Diagram("Remote Health Monitoring", show=False):
 # Smart Home Integration - Uses AWS Lambda and EventBridge for automation
 with Diagram("Smart Home Integration", show=False):
     with Cluster("BLE Network"):
-        ble_sensor = Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg")
+        ble_sensor = Custom("STM32WB55\nSensor Node", "./PROTEUS.png")
         greengrass_gateway = Custom("STM32MPU\nGreengrassV2\nGateway\n", "./MP1DK.jpeg")
 
     iot_core = IotCore("AWS IoT Core")
@@ -44,7 +44,7 @@ with Diagram("Smart Home Integration", show=False):
 # Medical Device Integration - Uses Amazon S3 & Cognito for secure storage
 with Diagram("Medical Device Integration", show=False):
     with Cluster("BLE Network"):
-        medical_device = Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg")
+        medical_device = Custom("STM32WB55\nSensor Node", "./PROTEUS.png")
         greengrass_gateway = Custom("STM32MPU\nGreengrassV2\nGateway", "./MP1DK.jpeg")
 
     iot_core = IotCore("AWS IoT Core")
@@ -58,7 +58,7 @@ with Diagram("Medical Device Integration", show=False):
 # Industrial Equipment Monitoring - Uses SQS for predictive maintenance
 with Diagram("Industrial Equipment Monitoring", show=False):
     with Cluster("BLE Network"):
-        industrial_sensor = Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg")
+        industrial_sensor = Custom("STM32WB55\nSensor Node", "./PROTEUS.png")
         greengrass_gateway = Custom("STM32MPU\nGreengrassV2\nGateway\n", "./MP1DK.jpeg")
 
     iot_core = IotCore("AWS IoT Core")

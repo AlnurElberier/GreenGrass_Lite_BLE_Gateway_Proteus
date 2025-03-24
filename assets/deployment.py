@@ -38,7 +38,7 @@ with Diagram("AWS_Greengrass_BLE_Gateway_Deployment", show=False):
         gateway_device = Custom("STM32MPU\nGreengrassV2\nGateway\n", "./MP1DK.jpeg")
 
         # BLE Sensor Node
-        ble_sensor = Custom("STM32WB55\nSensor Node", "./NUCLEO-WB55RG.jpg")
+        ble_sensor = Custom("STM32WB55\nSensor Node", "./PROTEUS.png")
 
         ble = Custom("Bluetooth\nLow Energy", "./Bluetooth.png")
 
